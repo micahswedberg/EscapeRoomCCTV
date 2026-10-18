@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MERIDIAN SECURITY TERMINAL</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+<style>
+:root{--g:#3dff70;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#000;color:var(--g);font:22px/1.25 "VT323","Courier New",monospace;overflow:hidden}
+[hidden]{display:none!important}
+
+/* ---------- terminal ---------- */
+#term{position:fixed;inset:0;padding:6vh 6vw;overflow:auto;font-size:clamp(20px,3vw,32px);text-shadow:0 0 6px var(--g),0 0 14px #0a8a2a;background:radial-gradient(ellipse at center,#06200d,#000 85%);animation:tf 5s infinite}
+#term::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.7))}
+#out{margin:0;font:inherit;white-space:pre-wrap}
+#line{display:flex;align-items:center}
+#pw{flex:0 1 20ch;background:none;border:0;outline:0;color:inherit;font:inherit;text-shadow:inherit;caret-color:var(--g);caret-shape:block;padding:0;letter-spacing:.1em}
+
+/* ---------- CCTV grid ---------- */
+#view{position:fixed;inset:0;background:#0a0a08}
+#grid{height:100%;padding:.8vmin;display:grid;grid-template:repeat(3,minmax(0,1fr))/repeat(2,minmax(0,1fr));gap:.8vmin}
+.mon{position:relative;display:flex;min-height:0;padding:1.1vmin 1.1vmin 2.4vmin;border-radius:2vmin;background:linear-gradient(150deg,#d6cfb8,#9a937c 50%,#6b6652);box-shadow:inset 0 2px 3px #fff8,inset 0 -3px 5px #0006,0 0 0 1px #000}
+.mon::before{content:"MERIDIAN  CH-0" attr(data-n);position:absolute;left:2vmin;bottom:.5vmin;font-size:clamp(10px,1.6vmin,18px);color:#4a4636;letter-spacing:.15em}
+.mon::after{content:"";position:absolute;right:2vmin;bottom:.8vmin;width:.8vmin;height:.8vmin;border-radius:50%;background:#3f6;box-shadow:0 0 6px #3f6}
+.scr{position:relative;flex:1;overflow:hidden;isolation:isolate;background:#000;border-radius:3vmin/2.4vmin;box-shadow:0 0 0 .5vmin #15140f;animation:fl 4s infinite}
+.mon:nth-child(2n) .scr{animation-duration:5.3s}
+.mon:nth-child(3n) .scr{animation-duration:3.7s}
+.scr img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:grayscale(1) contrast(1.4) brightness(.85);animation:jit 7s infinite}
+.empty{background:#031a09}.empty .scr{background:#031a09}
+.empty img{display:none}
+.fx{position:absolute;inset:0;pointer-events:none}
+.tint{background:#27ff5a;mix-blend-mode:multiply}
+.glow{background:rgba(0,70,15,.35);mix-blend-mode:screen}
+.lines{background:repeating-linear-gradient(0deg,rgba(0,0,0,.4) 0 1px,transparent 1px 3px)}
+.noise{opacity:.13;mix-blend-mode:overlay;animation:nz .5s steps(5) infinite;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.empty .noise{opacity:.45}
+.roll{bottom:auto;height:30%;background:linear-gradient(transparent,rgba(150,255,170,.16),transparent);animation:roll 7s linear infinite}
+.mon:nth-child(2n) .roll{animation-delay:-3s}
+.mon:nth-child(3n) .roll{animation-delay:-5s}
+.vig{background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,.75))}
+.hud{position:absolute;font-size:clamp(14px,2.7vmin,30px);color:#a8ffba;text-shadow:0 0 5px #3f6,1px 1px 0 #000;letter-spacing:.06em;pointer-events:none}
+.tl{top:1.4vmin;left:2vmin}.tr{top:1.4vmin;right:2vmin}.bl{bottom:1.2vmin;left:2vmin}
+.rec{display:inline-block;width:.7em;height:.7em;border-radius:50%;background:#cfffd8;box-shadow:0 0 6px #3f6;margin-right:.4em;animation:bl 1.2s steps(1) infinite}
+.tip{display:none;align-items:center;justify-content:center;text-align:center;padding:6%}
+.empty .tip{display:flex}
+.tip div{pointer-events:auto;border:1px dashed var(--g);background:rgba(0,18,4,.85);padding:.6em 1em;max-width:90%;text-shadow:0 0 5px #3f6;font-size:clamp(14px,2.6vmin,28px);color:var(--g)}
+.adm .tip div{cursor:pointer}
+.ctl{position:absolute;left:50%;bottom:1vmin;transform:translateX(-50%);display:none;gap:.6em;font-size:clamp(14px,2.4vmin,26px)}
+.adm .ctl{display:flex}
+.btn{font:inherit;color:var(--g);background:rgba(0,20,5,.9);border:1px solid var(--g);padding:0 .6em;cursor:pointer;text-shadow:0 0 4px #3f6}
+.btn:hover{background:var(--g);color:#001a06;text-shadow:none}
+
+/* ---------- admin panel ---------- */
+#admin{position:fixed;z-index:100;left:50%;top:calc(env(safe-area-inset-top,0px) + 6px);transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:.6em;align-items:center;justify-content:center;max-width:96vw;padding:.3em .8em;background:rgba(0,12,3,.93);border:1px solid var(--g);text-shadow:0 0 5px #3f6}
+#admin .body{display:flex;flex-wrap:wrap;gap:.6em;align-items:center}
+#admin.min .body{display:none}
+#np{background:#000;color:var(--g);border:1px solid var(--g);font:inherit;width:11ch;padding:0 .3em;outline:0}
+
+@keyframes tf{0%,100%{opacity:1}50%{opacity:.96}}
+@keyframes fl{0%,90%,100%{filter:brightness(1)}92%{filter:brightness(.8)}94%{filter:brightness(1.15)}}
+@keyframes jit{0%,100%{transform:translate(0,0) scale(1.02)}50%{transform:translate(-.5px,.4px) scale(1.02)}}
+@keyframes bl{50%{opacity:0}}
+@keyframes nz{0%{background-position:0 0}25%{background-position:-40px 30px}50%{background-position:30px -50px}75%{background-position:-20px -10px}100%{background-position:50px 40px}}
+@keyframes roll{from{transform:translateY(-110%)}to{transform:translateY(380%)}}
+</style>
+</head>
+<body>
+
+<div id="term">
+  <pre id="out"></pre>
+  <div id="line" hidden><span>PASSWORD:&nbsp;</span><input id="pw" type="password" autocomplete="off" spellcheck="false"></div>
+</div>
+
+<div id="view" hidden>
+  <div id="grid"></div>
+  <div id="admin" hidden>
+    <b>ADMIN MODE</b>
+    <span class="body">
+      PLAYER PASSWORD: <input id="np" spellcheck="false" autocomplete="off">
+      <button class="btn" id="sp">SAVE</button>
+      <span id="msg"></span>
+      <button class="btn" id="lo">LOGOUT</button>
+    </span>
+    <button class="btn" id="mn">_</button>
+  </div>
+  <input type="file" id="file" accept="image/*" hidden>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const ADMIN="Ducky1627!",KEY="cctv_player_pw";
+let memPW="1234",ft,tries=0;
+
+/* ----- player password (localStorage) ----- */
+const getPW=()=>{try{const v=localStorage.getItem(KEY);return v===null?memPW:v}catch(e){return memPW}};
+const setPW=v=>{memPW=v;try{localStorage.setItem(KEY,v)}catch(e){}};
+
+/* ----- images (IndexedDB, one record per camera slot) ----- */
+const dbp=new Promise((ok,no)=>{try{const r=indexedDB.open("cctv-room",1);r.onupgradeneeded=()=>r.result.createObjectStore("img");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}});
+const idb=(mode,fn)=>dbp.then(d=>new Promise((ok,no)=>{const t=d.transaction("img",mode);let q;try{q=fn(t.objectStore("img"))}catch(e){return no(e)}t.oncomplete=()=>ok(q&&q.result);t.onerror=t.onabort=()=>no(t.error)}));
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+
+/* ----- build the grid ----- */
+const grid=$("grid"),file=$("file"),urls=[];
+for(let i=0;i<6;i++){const n=i+1;
+  grid.insertAdjacentHTML("beforeend",`<div class="mon empty" data-n="${n}"><div class="scr"><img alt="Camera ${n}"><div class="hud tl">CAM 0${n}</div><div class="hud tr"><i class="rec"></i>REC</div><div class="hud bl time"></div><div class="tip fx"><div data-a="up" data-i="${i}" title="Upload an image to display on this camera">⚠ NO IMAGE PROVIDED<br>An administrator must upload an image for this feed.</div></div><div class="fx tint"></div><div class="fx glow"></div><div class="fx lines"></div><div class="fx noise"></div><div class="fx roll"></div><div class="fx vig"></div><div class="ctl"><button class="btn" data-a="up" data-i="${i}">UPLOAD</button><button class="btn" data-a="rm" data-i="${i}">REMOVE</button></div></div></div>`);
+}
+function setImg(i,blob){
+  const m=grid.children[i],im=m.querySelector("img");
+  if(urls[i])URL.revokeObjectURL(urls[i]);
+  urls[i]=blob?URL.createObjectURL(blob):null;
+  urls[i]?im.src=urls[i]:im.removeAttribute("src");
+  m.classList.toggle("empty",!blob);
+}
+function flash(t){$("msg").textContent=t;clearTimeout(ft);ft=setTimeout(()=>$("msg").textContent="",4000)}
+
+for(let i=0;i<6;i++)idb("readonly",s=>s.get(i)).then(r=>r&&setImg(i,new Blob([r.b],{type:r.t}))).catch(()=>{});
+
+grid.onclick=e=>{
+  if(!$("view").classList.contains("adm"))return;
+  const b=e.target.closest("[data-a]");if(!b)return;
+  const i=+b.dataset.i;
+  if(b.dataset.a==="up"){file.dataset.i=i;file.click()}
+  else{setImg(i,null);idb("readwrite",s=>s.delete(i)).catch(()=>flash("COULD NOT CLEAR STORAGE"))}
+};
+file.onchange=async()=>{
+  const f=file.files[0],i=+file.dataset.i;file.value="";
+  if(!f||!f.type.startsWith("image/"))return;
+  const rec={t:f.type,b:await f.arrayBuffer()};
+  setImg(i,new Blob([rec.b],{type:rec.t}));
+  try{await idb("readwrite",s=>s.put(rec,i))}catch(e){flash("STORAGE FULL - IMAGE NOT SAVED")}  // put() overwrites, so a replaced image is removed
+};
+
+/* ----- timestamps ----- */
+const pad=n=>String(n).padStart(2,"0");
+function tick(){const d=new Date(),s=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;document.querySelectorAll(".time").forEach(e=>e.textContent=s)}
+setInterval(tick,1000);tick();
+
+/* ----- admin panel ----- */
+$("sp").onclick=()=>{const v=$("np").value;if(!v){flash("PASSWORD CANNOT BE EMPTY");return}setPW(v);flash("PLAYER PASSWORD SAVED")};
+$("lo").onclick=()=>location.reload();
+$("mn").onclick=()=>$("admin").classList.toggle("min");
+
+/* ----- terminal login ----- */
+const out=$("out"),BOOT=["MERIDIAN SECURITY SYSTEMS (C) 1987","SURVEILLANCE CONTROL TERMINAL   REV 2.3","","MEMORY CHECK .......... 640K OK","VIDEO BUS ............. 6 CHANNELS FOUND","TAPE DECK ............. NOT READY","","*** AUTHORIZED PERSONNEL ONLY ***",""];
+let n=0;
+(function step(){
+  if(n<BOOT.length){out.textContent+=BOOT[n++]+"\n";setTimeout(step,n<4?350:140)}
+  else{$("line").hidden=false;$("pw").focus()}
+})();
+$("term").onclick=()=>$("pw").focus();
+function enter(admin){
+  $("term").hidden=true;$("view").hidden=false;
+  $("view").classList.toggle("adm",admin);$("admin").hidden=!admin;
+  $("np").value=getPW();tick();
+}
+$("pw").onkeydown=e=>{
+  if(e.key!=="Enter")return;
+  const v=e.target.value;e.target.value="";
+  if(v===ADMIN)enter(true);
+  else if(v===getPW())enter(false);
+  else{out.textContent+="PASSWORD: "+"*".repeat(v.length)+"\nACCESS DENIED  (ATTEMPT "+(++tries)+")\n";$("term").scrollTop=1e5}
+};
+</script>
+</body>
+</html>

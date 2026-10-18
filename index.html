@@ -57,6 +57,10 @@ html,body{height:100%;margin:0;background:#000;color:var(--g);font:22px/1.25 "VT
 #admin{position:fixed;z-index:100;left:50%;top:calc(env(safe-area-inset-top,0px) + 6px);transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:.6em;align-items:center;justify-content:center;max-width:96vw;padding:.3em .8em;background:rgba(0,12,3,.93);border:1px solid var(--g);text-shadow:0 0 5px #3f6}
 #admin .body{display:flex;flex-wrap:wrap;gap:.6em;align-items:center}
 #admin.min .body{display:none}
+#view:not(.adm) .adm-only{display:none}
+#view:not(.adm) #admin,#view.adm #cx{display:none}
+#cx{position:fixed;top:0;right:0;z-index:100;display:flex;align-items:center;justify-content:center;width:max(15px,1.7vmin);height:max(15px,1.7vmin);padding:0;border:0;background:#0a0a08;color:var(--g);font:max(12px,1.5vmin)/1 "Courier New",monospace;opacity:.35;cursor:pointer}
+#cx:hover{opacity:1}
 #np{background:#000;color:var(--g);border:1px solid var(--g);font:inherit;width:11ch;padding:0 .3em;outline:0}
 
 @keyframes tf{0%,100%{opacity:1}50%{opacity:.96}}
@@ -76,16 +80,17 @@ html,body{height:100%;margin:0;background:#000;color:var(--g);font:22px/1.25 "VT
 
 <div id="view" hidden>
   <div id="grid"></div>
-  <div id="admin" hidden>
-    <b>ADMIN MODE</b>
-    <span class="body">
+  <div id="admin">
+    <b class="adm-only">ADMIN MODE</b>
+    <span class="body adm-only">
       PLAYER PASSWORD: <input id="np" spellcheck="false" autocomplete="off">
       <button class="btn" id="sp">SAVE</button>
       <span id="msg"></span>
-      <button class="btn" id="lo">LOGOUT</button>
-    </span>
-    <button class="btn" id="mn">_</button>
+      </span>
+    <button class="btn" id="lo">LOGOUT</button>
+    <button class="btn adm-only" id="mn">_</button>
   </div>
+  <button id="cx" title="Log out">×</button>
   <input type="file" id="file" accept="image/*" hidden>
 </div>
 
@@ -141,20 +146,20 @@ setInterval(tick,1000);tick();
 
 /* ----- admin panel ----- */
 $("sp").onclick=()=>{const v=$("np").value;if(!v){flash("PASSWORD CANNOT BE EMPTY");return}setPW(v);flash("PLAYER PASSWORD SAVED")};
-$("lo").onclick=()=>location.reload();
+$("lo").onclick=$("cx").onclick=()=>{$("msg").textContent="";$("view").hidden=true;$("view").classList.remove("adm");$("term").hidden=false;boot()};
 $("mn").onclick=()=>$("admin").classList.toggle("min");
 
 /* ----- terminal login ----- */
-const out=$("out"),BOOT=["MERIDIAN SECURITY SYSTEMS (C) 1987","SURVEILLANCE CONTROL TERMINAL   REV 2.3","","MEMORY CHECK .......... 640K OK","VIDEO BUS ............. 6 CHANNELS FOUND","TAPE DECK ............. NOT READY","","*** AUTHORIZED PERSONNEL ONLY ***",""];
-let n=0;
-(function step(){
-  if(n<BOOT.length){out.textContent+=BOOT[n++]+"\n";setTimeout(step,n<4?350:140)}
+const out=$("out"),BOOT=["BARNUM AND CO. TRAVELING CIRCUS","MERIDIAN SECURITY SYSTEMS (C) 1903","SURVEILLANCE CONTROL TERMINAL   REV 2.3","","MEMORY CHECK .......... 640K OK","VIDEO BUS ............. 6 CHANNELS FOUND","TAPE DECK ............. NOT READY","","*** AUTHORIZED PERSONNEL ONLY ***",""];
+let n=0,bt;
+function step(){
+  if(n<BOOT.length){out.textContent+=BOOT[n++]+"\n";bt=setTimeout(step,n<4?350:140)}
   else{$("line").hidden=false;$("pw").focus()}
-})();
+}function boot(){clearTimeout(bt);n=0;tries=0;out.textContent="";$("line").hidden=true;$("pw").value="";step()}boot();
 $("term").onclick=()=>$("pw").focus();
 function enter(admin){
   $("term").hidden=true;$("view").hidden=false;
-  $("view").classList.toggle("adm",admin);$("admin").hidden=!admin;
+  $("view").classList.toggle("adm",admin);$("admin").classList.remove("min");
   $("np").value=getPW();tick();
 }
 $("pw").onkeydown=e=>{
